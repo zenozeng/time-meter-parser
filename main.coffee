@@ -4,6 +4,14 @@ debug =
 class Parse
 
   constructor: (files) ->
+    if files?
+      localStorage.setItem('time-meter-cache', JSON.stringify(files))
+    else
+      files = localStorage.getItem 'time-meter-cache'
+      if files?
+        files = JSON.parse files
+      else
+        return
     collection = []
     files = files.forEach (file) ->
       debug.log "Parsing #{file.name}"
@@ -37,13 +45,42 @@ class Parse
     tree = {}
     logs.forEach (elem) ->
       {description, category, time} = elem
-      tree[category] = {sum: 0, children: {}} unless tree[category]?
-      tree[category].sum += time
-      unless tree[category].children[description]?
-        tree[category].children[description] = {sum: 0}
-      tree[category].children[description].sum += time
-    json = JSON.stringify tree, null, 2
-    document.getElementById('data').innerHTML = json
+      path = category.split('，')
+      path.push description
+      pathArr = []
+      for i in [1..path.length]
+        item =
+          path: path.slice(0, i).join('-')
+          level: i
+          name: path[i-1]
+        pathArr.push item
+      for path in pathArr
+        if tree[path.path]?
+          tree[path.path].time += time
+        else
+          tree[path.path] =
+            name: path.name
+            level: path.level
+            time: time
+    items = []
+    for key, value of tree
+      item =
+        key: key
+        name: value.name
+        level: value.level
+        time: Math.round(value.time*100) / 100
+      items.push item
+    console.log items.map (el) -> el.key
+    items = items.sort (a, b) ->
+      a.key.localeCompare(b.key)
+    console.log items.map (el) -> el.key
+    html = ''
+    for item in items
+      {name, level, time} = item
+      html += "<div class='item level-#{level}' style='padding-left: #{level*4*12}px'>
+        <span class='name'>#{name}</span>: #{time}
+      </div>"
+    document.getElementById('data').innerHTML = html
 
 document.getElementById('files').addEventListener 'change', (e) ->
   files = []
@@ -58,3 +95,6 @@ document.getElementById('files').addEventListener 'change', (e) ->
       if pending is 0
         window.parse = new Parse results
     reader.readAsText file
+
+fn =-> new Parse()
+setTimeout fn, 1000
