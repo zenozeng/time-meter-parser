@@ -32,9 +32,12 @@ class Parse
       o.time = parseFloat o.time
       o
     @logs = collection
-    @analysis()
+    start = document.getElementById('start').value
+    end = document.getElementById('end').value
+    @analysis new Date(start), new Date(end)
 
   analysis: (start = new Date('1970-01-01'), end = new Date()) ->
+    console.log {start: start, end: end}
     # use elem.end to filter
     logs = @logs.filter (elem) ->
       time = new Date elem.end
@@ -42,6 +45,15 @@ class Parse
         true
       else
         false
+    min = null
+    max = null
+    starts = logs.map (log) -> new Date(log.start).getTime()
+    ends = logs.map (log) -> new Date(log.end).getTime()
+    min = Math.min.apply this, starts
+    max = Math.max.apply this, ends
+    min = new Date min
+    max = new Date max
+    console.log {min: min, max: max}
     tree = {}
     logs.forEach (elem) ->
       {description, category, time} = elem
@@ -70,15 +82,13 @@ class Parse
         level: value.level
         time: Math.round(value.time*100) / 100
       items.push item
-    console.log items.map (el) -> el.key
     items = items.sort (a, b) ->
       a.key.localeCompare(b.key)
-    console.log items.map (el) -> el.key
     html = ''
     for item in items
       {name, level, time} = item
       html += "<div class='item level-#{level}' style='padding-left: #{level*4*12}px'>
-        <span class='name'>#{name}</span>: #{time}
+        <span class='name'>#{name}:</span> #{time}
       </div>"
     document.getElementById('data').innerHTML = html
 
